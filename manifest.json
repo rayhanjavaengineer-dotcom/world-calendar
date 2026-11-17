@@ -1,0 +1,16 @@
+{
+  "name": "World Calendar",
+  "short_name": "World Calendar",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#071326",
+  "theme_color": "#081426",
+  "description": "One world, every date, every moment.",
+  "icons": [
+    {
+      "src": "assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
