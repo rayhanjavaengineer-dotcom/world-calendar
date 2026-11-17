@@ -1,97 +1,37 @@
-(() => {
-  const $ = (id) => document.getElementById(id);
-  const now = new Date();
-  let viewDate = new Date(now.getFullYear(), now.getMonth(), 1);
-  let selectedDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  let viewMode = "grid";
-  const cities = [
-    ["Dhaka","Asia/Dhaka"],["London","Europe/London"],["New York","America/New_York"],
-    ["Tokyo","Asia/Tokyo"],["Dubai","Asia/Dubai"],["Sydney","Australia/Sydney"]
-  ];
-  const monthFmt = new Intl.DateTimeFormat("en", {month:"long",year:"numeric"});
-  const fullFmt = new Intl.DateTimeFormat("en", {weekday:"long",month:"long",day:"numeric",year:"numeric"});
-  const sameDay = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
-  const dateKey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-  const ordinal = n => {const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);};
-  function renderHeader(){
-    $("todayDate").textContent = new Intl.DateTimeFormat("en",{day:"numeric",month:"short",year:"numeric"}).format(now);
-    $("todayDay").textContent = new Intl.DateTimeFormat("en",{weekday:"long"}).format(now);
-    $("localTime").textContent = new Intl.DateTimeFormat("en",{hour:"2-digit",minute:"2-digit"}).format(new Date());
-    $("localZone").textContent = Intl.DateTimeFormat().resolvedOptions().timeZone || "Local device time";
-    const start = new Date(now.getFullYear(),0,0);
-    $("dayOfYear").textContent = Math.floor((now-start)/86400000).toString();
-    $("yearNow").textContent = now.getFullYear();
-  }
-  function buildYearOptions(){
-    const sel=$("yearSelect");
-    for(let y=1900;y<=2100;y++){const o=document.createElement("option");o.value=y;o.textContent=y;if(y===viewDate.getFullYear())o.selected=true;sel.append(o);}
-  }
-  function renderCalendar(){
-    $("monthTitle").textContent=monthFmt.format(viewDate);
-    $("yearSelect").value=viewDate.getFullYear();
-    const grid=$("calendarGrid");grid.innerHTML="";
-    const weekStart=Number($("weekStart").value);
-    const weekdays=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-    for(let i=0;i<7;i++){const w=document.createElement("div");w.className="weekday";w.textContent=weekdays[(i+weekStart)%7];grid.append(w);}
-    const first=new Date(viewDate.getFullYear(),viewDate.getMonth(),1);
-    const offset=(first.getDay()-weekStart+7)%7;
-    const daysInMonth=new Date(viewDate.getFullYear(),viewDate.getMonth()+1,0).getDate();
-    const prevDays=new Date(viewDate.getFullYear(),viewDate.getMonth(),0).getDate();
-    const total=Math.ceil((offset+daysInMonth)/7)*7;
-    for(let i=0;i<total;i++){
-      let d, outside=false;
-      if(i<offset){d=new Date(viewDate.getFullYear(),viewDate.getMonth()-1,prevDays-offset+i+1);outside=true;}
-      else if(i>=offset+daysInMonth){d=new Date(viewDate.getFullYear(),viewDate.getMonth()+1,i-offset-daysInMonth+1);outside=true;}
-      else d=new Date(viewDate.getFullYear(),viewDate.getMonth(),i-offset+1);
-      const b=document.createElement("button");b.type="button";b.className="day-cell"+(outside?" outside":"")+(sameDay(d,now)?" today":"")+(sameDay(d,selectedDate)?" selected":"");
-      b.setAttribute("aria-label",fullFmt.format(d));b.innerHTML=`<span class="day-number">${d.getDate()}</span>${sameDay(d,now)?'<span class="day-note">TODAY</span>':""}`;
-      b.addEventListener("click",()=>{selectedDate=new Date(d);if(outside)viewDate=new Date(d.getFullYear(),d.getMonth(),1);renderAll();});
-      grid.append(b);
-    }
-    renderList();
-  }
-  function renderList(){
-    const list=$("monthList");list.innerHTML="";
-    const count=new Date(viewDate.getFullYear(),viewDate.getMonth()+1,0).getDate();
-    for(let day=1;day<=count;day++){
-      const d=new Date(viewDate.getFullYear(),viewDate.getMonth(),day);
-      const b=document.createElement("button");b.type="button";b.className="list-row"+(sameDay(d,selectedDate)?" selected":"");
-      const dayName=new Intl.DateTimeFormat("en",{weekday:"long"}).format(d);
-      b.innerHTML=`<span class="list-date">${String(day).padStart(2,"0")} ${new Intl.DateTimeFormat("en",{month:"short"}).format(d)}</span><span class="list-day">${dayName}</span><span class="list-meta">${sameDay(d,now)?"TODAY":ordinal(day)+" day"}</span>`;
-      b.addEventListener("click",()=>{selectedDate=new Date(d);renderAll();});
-      list.append(b);
-    }
-  }
-  function renderDetails(){
-    $("selectedHeading").textContent=fullFmt.format(selectedDate);
-    $("selectedDescription").textContent=sameDay(selectedDate,now)?"This is today in your device's local calendar.":`You selected ${new Intl.DateTimeFormat("en",{weekday:"long"}).format(selectedDate)}.`;
-    const start=new Date(selectedDate.getFullYear(),0,0);
-    const dayOfYear=Math.floor((selectedDate-start)/86400000);
-    $("selectedOrdinal").textContent=`${ordinal(selectedDate.getDate())} day of the month · ${ordinal(dayOfYear)} day of the year`;
-  }
-  function renderClocks(){
-    $("clockList").innerHTML=cities.map(([city,zone])=>{
-      const time=new Intl.DateTimeFormat("en",{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:true,timeZone:zone}).format(new Date());
-      const date=new Intl.DateTimeFormat("en",{weekday:"short",day:"numeric",month:"short",timeZone:zone}).format(new Date());
-      return `<div class="city-clock"><span>${city.toUpperCase()}</span><strong>${time}</strong><b>${date}</b></div>`;
-    }).join("");
-  }
-  function renderAll(){renderCalendar();renderDetails();}
-  $("prevMonth").addEventListener("click",()=>{viewDate=new Date(viewDate.getFullYear(),viewDate.getMonth()-1,1);renderAll();});
-  $("nextMonth").addEventListener("click",()=>{viewDate=new Date(viewDate.getFullYear(),viewDate.getMonth()+1,1);renderAll();});
-  function goToday(){viewDate=new Date(now.getFullYear(),now.getMonth(),1);selectedDate=new Date(now.getFullYear(),now.getMonth(),now.getDate());renderAll();}
-  $("todayButton").addEventListener("click",()=>{goToday();$("calendar").scrollIntoView({behavior:"smooth"});});
-  $("toolbarToday").addEventListener("click",goToday);
-  $("yearSelect").addEventListener("change",e=>{viewDate=new Date(Number(e.target.value),viewDate.getMonth(),1);renderAll();});
-  $("weekStart").addEventListener("change",renderAll);
-  document.querySelectorAll(".view-button").forEach(btn=>btn.addEventListener("click",()=>{
-    viewMode=btn.dataset.view;
-    document.querySelectorAll(".view-button").forEach(x=>x.classList.toggle("active",x===btn));
-    $("calendarGrid").classList.toggle("hidden",viewMode!=="grid");
-    $("monthList").classList.toggle("hidden",viewMode!=="list");
-  }));
-  $("themeToggle").addEventListener("click",()=>document.body.classList.toggle("light"));
-  $("menuToggle").addEventListener("click",()=>document.querySelector(".desktop-nav").classList.toggle("open"));
-  renderHeader();buildYearOptions();renderAll();renderClocks();
-  setInterval(()=>{renderHeader();renderClocks();},1000);
+(()=>{"use strict";
+const $=id=>document.getElementById(id),cities=[["Dhaka","Asia/Dhaka"],["London","Europe/London"],["New York","America/New_York"],["Tokyo","Asia/Tokyo"],["Dubai","Asia/Dubai"],["Sydney","Australia/Sydney"]];
+const monthFmt=new Intl.DateTimeFormat("en",{month:"long",year:"numeric"}),fullFmt=new Intl.DateTimeFormat("en",{weekday:"long",month:"long",day:"numeric",year:"numeric"});
+const same=(a,b)=>a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(),ordinal=n=>{const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);},localToday=()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate());};
+const store={get(k){try{return localStorage.getItem(k)}catch(_){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(_){}}};
+let today=localToday(),viewDate=new Date(today.getFullYear(),today.getMonth(),1),selectedDate=new Date(today),viewMode="grid";
+function header(){const n=new Date();$("todayDate").textContent=new Intl.DateTimeFormat("en",{day:"numeric",month:"short",year:"numeric"}).format(n);$("todayDay").textContent=new Intl.DateTimeFormat("en",{weekday:"long"}).format(n);$("localTime").textContent=new Intl.DateTimeFormat("en",{hour:"2-digit",minute:"2-digit",second:"2-digit"}).format(n);$("localZone").textContent=Intl.DateTimeFormat().resolvedOptions().timeZone||"Local device time";$("dayOfYear").textContent=Math.floor((new Date(n.getFullYear(),n.getMonth(),n.getDate())-new Date(n.getFullYear(),0,0))/86400000);$("yearNow").textContent=n.getFullYear();}
+function buildYears(){const s=$("yearSelect");s.replaceChildren();for(let y=1900;y<=2100;y++){const o=document.createElement("option");o.value=y;o.textContent=y;s.append(o);}syncYear();}
+function syncYear(){const s=$("yearSelect"),y=viewDate.getFullYear();if(![...s.options].some(o=>Number(o.value)===y)){const o=document.createElement("option");o.value=y;o.textContent=y;s.append(o);}s.value=String(y);}
+function renderCalendar(){ $("monthTitle").textContent=monthFmt.format(viewDate);syncYear();const grid=$("calendarGrid");grid.replaceChildren();const start=Number($("weekStart").value),names=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];for(let i=0;i<7;i++){const w=document.createElement("div");w.className="weekday";w.setAttribute("role","columnheader");w.textContent=names[(i+start)%7];grid.append(w);}
+const first=new Date(viewDate.getFullYear(),viewDate.getMonth(),1),offset=(first.getDay()-start+7)%7,days=new Date(viewDate.getFullYear(),viewDate.getMonth()+1,0).getDate(),prevDays=new Date(viewDate.getFullYear(),viewDate.getMonth(),0).getDate(),total=Math.ceil((offset+days)/7)*7;
+for(let i=0;i<total;i++){let d,out=false;if(i<offset){d=new Date(viewDate.getFullYear(),viewDate.getMonth()-1,prevDays-offset+i+1);out=true;}else if(i>=offset+days){d=new Date(viewDate.getFullYear(),viewDate.getMonth()+1,i-offset-days+1);out=true;}else d=new Date(viewDate.getFullYear(),viewDate.getMonth(),i-offset+1);
+const b=document.createElement("button");b.type="button";b.className="day-cell"+(out?" outside":"")+(same(d,today)?" today":"")+(same(d,selectedDate)?" selected":"");b.setAttribute("role","gridcell");b.setAttribute("aria-label",fullFmt.format(d));b.setAttribute("aria-pressed",String(same(d,selectedDate)));if(same(d,today))b.setAttribute("aria-current","date");const num=document.createElement("span");num.className="day-number";num.textContent=d.getDate();b.append(num);if(same(d,today)){const t=document.createElement("span");t.className="day-note";t.textContent="TODAY";b.append(t);}b.addEventListener("click",()=>select(d,true));grid.append(b);}
+renderList();}
+function renderList(){const list=$("monthList");list.replaceChildren();const count=new Date(viewDate.getFullYear(),viewDate.getMonth()+1,0).getDate();for(let day=1;day<=count;day++){const d=new Date(viewDate.getFullYear(),viewDate.getMonth(),day),b=document.createElement("button");b.type="button";b.className="list-row"+(same(d,selectedDate)?" selected":"");b.setAttribute("aria-pressed",String(same(d,selectedDate)));const a=document.createElement("span");a.className="list-date";a.textContent=String(day).padStart(2,"0")+" "+new Intl.DateTimeFormat("en",{month:"short"}).format(d);const c=document.createElement("span");c.className="list-day";c.textContent=new Intl.DateTimeFormat("en",{weekday:"long"}).format(d);const m=document.createElement("span");m.className="list-meta";m.textContent=same(d,today)?"TODAY":ordinal(day)+" day";b.append(a,c,m);b.addEventListener("click",()=>select(d,false,true));list.append(b);}}
+function details(){ $("selectedHeading").textContent=fullFmt.format(selectedDate);$("selectedDescription").textContent=same(selectedDate,today)?"This is today in your device's local calendar.":`You selected ${new Intl.DateTimeFormat("en",{weekday:"long"}).format(selectedDate)}.`;const doy=Math.floor((new Date(selectedDate.getFullYear(),selectedDate.getMonth(),selectedDate.getDate())-new Date(selectedDate.getFullYear(),0,0))/86400000);$("selectedOrdinal").textContent=`${ordinal(selectedDate.getDate())} day of the month · ${ordinal(doy)} day of the year`;}
+function clocks(){const n=new Date(),root=$("clockList");root.replaceChildren();cities.forEach(([city,zone])=>{const card=document.createElement("div");card.className="city-clock";const name=document.createElement("span");name.textContent=city.toUpperCase();const time=document.createElement("strong");time.textContent=new Intl.DateTimeFormat("en",{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:true,timeZone:zone}).format(n);const date=document.createElement("b");date.textContent=new Intl.DateTimeFormat("en",{weekday:"short",day:"numeric",month:"short",timeZone:zone}).format(n);card.append(name,time,date);root.append(card);});}
+function render(){renderCalendar();details();}
+function select(d,changeMonth,scroll){selectedDate=new Date(d.getFullYear(),d.getMonth(),d.getDate());if(changeMonth)viewDate=new Date(d.getFullYear(),d.getMonth(),1);render();if(scroll)$("selectedDetails").scrollIntoView({behavior:"smooth",block:"nearest"});}
+function setView(mode){viewMode=mode;$("calendarGrid").classList.toggle("hidden",mode!=="grid");$("monthList").classList.toggle("hidden",mode!=="list");document.querySelectorAll(".view-button").forEach(b=>{const on=b.dataset.view===mode;b.classList.toggle("active",on);b.setAttribute("aria-pressed",String(on));});}
+function changeMonth(delta){const d=new Date(viewDate.getFullYear(),viewDate.getMonth()+delta,1),last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();viewDate=d;selectedDate=new Date(d.getFullYear(),d.getMonth(),Math.min(selectedDate.getDate(),last));render();}
+function goToday(){today=localToday();viewDate=new Date(today.getFullYear(),today.getMonth(),1);selectedDate=new Date(today);render();$("calendar").scrollIntoView({behavior:"smooth"});}
+function theme(mode){const light=mode==="light";document.body.classList.toggle("light",light);store.set("wc-theme",mode);$("themeToggle").textContent=light?"☾":"☼";$("themeToggle").setAttribute("aria-label",light?"Switch to dark theme":"Switch to light theme");$("themeColor").content=light?"#f1f5fa":"#081426";}
+function closeMenu(){$("primaryNav").classList.remove("open");$("menuToggle").setAttribute("aria-expanded","false");$("menuToggle").setAttribute("aria-label","Open navigation menu");}
+$("prevMonth").addEventListener("click",()=>changeMonth(-1));$("nextMonth").addEventListener("click",()=>changeMonth(1));$("todayButton").addEventListener("click",goToday);$("toolbarToday").addEventListener("click",goToday);
+$("yearSelect").addEventListener("change",e=>{const y=Number(e.target.value),m=viewDate.getMonth(),last=new Date(y,m+1,0).getDate();viewDate=new Date(y,m,1);selectedDate=new Date(y,m,Math.min(selectedDate.getDate(),last));render();});
+$("weekStart").addEventListener("change",()=>{store.set("wc-week-start",$("weekStart").value);render();});
+document.querySelectorAll(".view-button").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
+$("monthListNav").addEventListener("click",()=>{setView("list");closeMenu();$("calendar").scrollIntoView({behavior:"smooth",block:"start"});});
+$("themeToggle").addEventListener("click",()=>theme(document.body.classList.contains("light")?"dark":"light"));
+$("menuToggle").addEventListener("click",()=>{const open=$("primaryNav").classList.toggle("open");$("menuToggle").setAttribute("aria-expanded",String(open));$("menuToggle").setAttribute("aria-label",open?"Close navigation menu":"Open navigation menu");});
+$("primaryNav").querySelectorAll("a").forEach(a=>a.addEventListener("click",()=>{if(a!==$("monthListNav"))closeMenu();}));
+window.addEventListener("resize",()=>{if(innerWidth>800)closeMenu();});document.addEventListener("visibilitychange",()=>{if(!document.hidden){rollover();header();clocks();}});
+function rollover(){const n=localToday();if(!same(n,today)){today=n;if(same(selectedDate,new Date(n.getFullYear(),n.getMonth(),n.getDate()))||!selectedDate){selectedDate=new Date(n);}render();}}
+today=localToday();viewDate=new Date(today.getFullYear(),today.getMonth(),1);selectedDate=new Date(today);theme(store.get("wc-theme")==="light"?"light":"dark");$("weekStart").value=store.get("wc-week-start")==="1"?"1":"0";buildYears();header();render();clocks();setInterval(()=>{rollover();header();clocks();},1000);
+if("serviceWorker"in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(e=>console.warn("SW registration failed",e)));
 })();
