@@ -1,0 +1,4 @@
+const CACHE="world-calendar-v2.0.0";const FILES=["./","./index.html","./manifest.json","./css/styles.css","./js/app.js","./assets/favicon.svg","./assets/icons/icon-192.png","./assets/icons/icon-512.png"];
+self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));
+self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener("fetch",e=>{const r=e.request;if(r.method!=="GET"||new URL(r.url).origin!==self.location.origin)return;e.respondWith(caches.match(r).then(hit=>hit||fetch(r).then(res=>{if(res.ok){const copy=res.clone();caches.open(CACHE).then(c=>c.put(r,copy));}return res;}).catch(()=>r.mode==="navigate"?caches.match("./index.html"):new Response("Offline resource unavailable",{status:503}))));});
